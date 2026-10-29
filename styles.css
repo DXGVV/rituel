@@ -97,7 +97,7 @@ main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
 .step .body { flex: 1; min-width: 0; }
 .step .name { font-weight: 600; }
 .step .note { font-size: 13px; color: var(--muted); }
-.step .tag { font-size: 11px; padding: 2px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; font-weight: 600; vertical-align: 2px; }
+.step .tag { display: inline-block; white-space: nowrap; font-size: 11px; padding: 2px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; font-weight: 600; vertical-align: 2px; }
 .step.teeth .tag { background: var(--teeth-soft); color: var(--teeth); }
 .check { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex: none; transition: all .15s; }
 .step.done .check { background: var(--ok); border-color: var(--ok); color: #fff; }
@@ -164,3 +164,4 @@ dialog#sheet::backdrop { background: rgba(0,0,0,.4); }
 
 #toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 14px); transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 50; white-space: nowrap; }
 #toast.show { opacity: 1; transform: translateX(-50%); }
+.step .pill { margin-left: 6px; vertical-align: 2px; }

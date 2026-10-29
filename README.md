@@ -3,10 +3,10 @@
 Appli perso (PWA) pour suivre ma routine skincare et dents sur iPhone.
 
 - **Jour** : la routine du matin et du soir dans l'ordre, dents puis peau, avec une note par étape. On coche au fur et à mesure.
-- Soirs à thème : exfoliation (lun/mer/ven), rétinol (mar/jeu/sam), récupération (dimanche)
+- Chaque produit affiché avec son rôle en un ou deux mots (anti-taches, points noirs, anti-rides…), étapes optionnelles qui ne comptent pas dans la progression
 - **Calendrier** : le mois en un coup d'œil (matin fait, soir fait, photo prise) et la série de jours complets
 - **Photos** : une photo de peau par jour, mode avant / après pour comparer deux dates
-- **Produits** : jours matin et soir réglables pour chaque produit, ajout d'une liste en collant un produit par ligne
+- **Produits** : rôle, jours matin et soir réglables pour chaque produit, ajout d'une liste en collant un produit par ligne
 
 ## Mise en ligne (GitHub Pages)
 

@@ -31,6 +31,7 @@ const CATEGORIES = {
   moisturizer:{ label: 'Hydratant',          group: 'skin', order: 60, am: ALL, pm: ALL, note: '' },
   lip:        { label: 'Lèvres',             group: 'skin', order: 70, am: [], pm: ALL, note: '' },
   spf:        { label: 'Protection solaire', group: 'skin', order: 90, am: ALL, pm: [], note: 'Dernière étape, 2 doigts de produit, même s\'il fait gris.' },
+  concealer:  { label: 'Anti-cernes',        group: 'skin', order: 95, am: ALL, pm: [], note: '' },
 };
 
 // Devine une catégorie depuis le nom d'un produit (pour coller une liste d'un coup).
@@ -60,43 +61,76 @@ function guessCategory(name) {
   return 'other';
 }
 
-// Routine de Tom (octobre 2026). Le fil dentaire est un conseil ajouté, supprimable.
-const DEFAULT_PRODUCTS = [
-  ['Huile de coco (oil pulling)', 'oilpull', {}],
-  ['Siwak', 'siwak', {}],
-  ['Brosse à dents électrique', 'toothpaste', { note: '2 min, 30 s par quart de bouche. Dentifrice fluoré, recracher sans rincer.' }],
-  ['Fil dentaire ou brossettes', 'floss', { note: 'Conseil : la brosse ne nettoie pas entre les dents. Chaque soir, avant le brossage.' }],
-  ['Patchs blanchissants', 'whitening', { note: '1 fois/semaine. Pas juste après le brossage : attendre 30 min limite la sensibilité.' }],
-  ['Nettoyant ANUA', 'cleanser', {}],
-  ['Patchs yeux Aloe Paris', 'patch', { note: '15 min.' }],
-  ['Sérum ANUA Niacinamide 10 % + Acide tranexamique 4 %', 'serum', { pm: [1, 2, 3, 4, 5, 6], note: 'Pas le dimanche soir (récupération).' }],
-  ['The Ordinary Acide salicylique 2 %', 'exfoliant', { note: 'Tout le visage sauf le contour des yeux.' }],
-  ['ANUA Retinol 0.1 + Caffeine Eye Cream', 'retinoid', { note: 'Tout le visage, fine couche.' }],
-  ['SKINTIFIC 5X Ceramide Barrier Moisture Gel', 'moisturizer', {}],
-  ['La Roche-Posay Anthelios UVmune 400 SPF50+', 'spf', { note: '2 doigts de produit, 5 min de séchage. À renouveler toutes les 2 h si tu es dehors.' }],
+// Routine de Tom (mise à jour du 29 octobre 2026). role = à quoi sert le produit, en un ou deux mots.
+// optional = étape facultative : affichée, mais ne compte pas dans la progression.
+// Le fil dentaire est un conseil ajouté, supprimable.
+const ROUTINE_VERSION = 2;
+const TEETH_PRODUCTS = [
+  ['Huile de coco (oil pulling)', 'oilpull', { role: 'Antibactérien' }],
+  ['Gel Nonio', 'tongue', { role: 'Langue', note: 'Sur la langue, avec un gratte-langue ou une brosse.' }],
+  ['Siwak', 'siwak', { role: 'Nettoyage' }],
+  ['Brosse à dents électrique', 'toothpaste', { role: 'Brossage', note: '2 min, 30 s par quart de bouche. Dentifrice fluoré, recracher sans rincer.' }],
+  ['Fil dentaire ou brossettes', 'floss', { role: 'Entre les dents', note: 'Conseil : la brosse ne nettoie pas entre les dents. Chaque soir, avant le brossage.' }],
+  ['Patchs blanchissants', 'whitening', { role: 'Blanchiment', note: '1 fois/semaine. Pas juste après le brossage : attendre 30 min limite la sensibilité.' }],
 ];
+const SKIN_PRODUCTS = [
+  ['Nettoyant ANUA', 'cleanser', { role: 'Nettoyant' }],
+  ['ANUA Niacinamide 10 % + Acide tranexamique 4 %', 'serum', { role: 'Éclat / anti-taches', pm: [] }],
+  ['The Ordinary Acide salicylique 2 %', 'exfoliant', { role: 'Points noirs', pm: [1, 4], note: 'Nez, joues, menton.' }],
+  ['Beauty of Joseon Revive Eye Serum', 'eye', { role: 'Anti-rides', am: [], note: 'Contour des yeux + front.' }],
+  ['Masque niacinamide + TXA', 'mask', { role: 'Masque bonus', optional: true, note: 'Bonus, quand tu en as envie. Change le jour dans Produits.' }],
+  ['Isntree Hyaluronic Acid Aqua Gel Cream', 'moisturizer', { role: 'Hydratation' }],
+  ['Numbuzin No.1 Clear Filter Sun Essence', 'spf', { role: 'Protection solaire', note: '2 doigts de produit, en dernier. À renouveler toutes les 2 h si tu es dehors.' }],
+  ['The Saem Cover Perfection 0.5 Ice Beige', 'concealer', { role: 'Anti-cernes', optional: true, note: 'Mélangé avec un point de crème hydratante.' }],
+];
+const DEFAULT_PRODUCTS = [...TEETH_PRODUCTS, ...SKIN_PRODUCTS];
 
 const DAY_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 /* ---------- Stockage ---------- */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const STORE_KEY = 'rituel-tom-v1';
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function makeProduct(name, category = guessCategory(name), over = {}) {
   const c = CATEGORIES[category];
-  return { id: uid(), name, category, am: [...c.am], pm: [...c.pm], note: '', active: true, ...over };
+  return { id: uid(), name, category, role: '', am: [...c.am], pm: [...c.pm], note: '', optional: false, active: true, ...over };
 }
 function loadState() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY));
     if (s && Array.isArray(s.products)) return s;
   } catch (e) { /* stockage vide ou illisible */ }
-  return { products: DEFAULT_PRODUCTS.map(([n, cat, over]) => makeProduct(n, cat, over)), log: {}, photos: {} };
+  return { products: DEFAULT_PRODUCTS.map(([n, cat, over]) => makeProduct(n, cat, over)), log: {}, photos: {}, routineVersion: ROUTINE_VERSION };
+}
+// Passage à la routine du 29 octobre : nouveaux produits peau, rôles, gel Nonio.
+// Les jours déjà passés gardent leur score (calculé avec l'ancienne routine) pour ne pas casser le calendrier.
+function migrateRoutine() {
+  if ((state.routineVersion || 1) >= ROUTINE_VERSION) return;
+  const today = iso(new Date());
+  for (const date of Object.keys(state.log)) if (date < today) state.log[date].snap = dayProgress(date);
+  const old = state.products;
+  const reuse = (re, cat) => old.find(p => p.category === cat && re.test(p.name));
+  const fresh = ([n, cat, over]) => makeProduct(n, cat, over);
+  const teeth = old.filter(p => CATEGORIES[p.category].group === 'teeth');
+  for (const def of TEETH_PRODUCTS) {
+    const match = teeth.find(p => p.category === def[1]);
+    if (match) { if (!match.role) match.role = def[2].role; } else if (def[1] === 'tongue') teeth.push(fresh(def));
+  }
+  const skin = SKIN_PRODUCTS.map(def => {
+    const p = fresh(def);
+    // Même produit qu'avant : on garde son id pour que les cases déjà cochées restent liées.
+    const prev = def[1] === 'cleanser' ? reuse(/anua/i, 'cleanser') : def[1] === 'serum' ? reuse(/niacinamide/i, 'serum') : def[1] === 'exfoliant' ? reuse(/salicyl/i, 'exfoliant') : null;
+    if (prev) p.id = prev.id;
+    return p;
+  });
+  state.products = [...teeth, ...skin];
+  state.routineVersion = ROUTINE_VERSION;
 }
 let state = loadState();
 state.photos = state.photos || {};
 state.start = state.start || iso(new Date()); // les jours d'avant l'installation ne comptent pas comme ratés
+migrateRoutine();
 save();
 function save() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { toast('Sauvegarde impossible'); }
@@ -176,15 +210,19 @@ function toggleDone(date, slot, id) {
   const day = (state.log[date] = state.log[date] || {});
   const s = (day[slot] = day[slot] || {});
   if (s[id]) delete s[id]; else s[id] = Date.now();
+  delete day.snap; // jour modifié : on le recalcule avec la routine actuelle
   save();
 }
 function dayProgress(date) {
+  const snap = state.log[date] && state.log[date].snap;
+  if (snap) return snap;
   const r = routineFor(date);
   let total = 0, done = 0;
   const per = {};
   for (const slot of ['am', 'pm']) {
-    const t = r[slot].length;
-    const d = r[slot].filter(p => isDone(date, slot, p.id)).length;
+    const steps = r[slot].filter(p => !p.optional);
+    const t = steps.length;
+    const d = steps.filter(p => isDone(date, slot, p.id)).length;
     per[slot] = t ? d / t : 0;
     total += t; done += d;
   }
@@ -240,7 +278,7 @@ function stepHTML(p, slot, i) {
   const done = isDone(ui.date, slot, p.id);
   return `<button class="step ${c.group} ${done ? 'done' : ''}" data-slot="${slot}" data-id="${p.id}" style="width:100%;text-align:left">
     <span class="num">${i + 1}</span>
-    <span class="body"><span class="name">${esc(p.name)}</span><span class="tag">${esc(c.label)}</span>
+    <span class="body"><span class="name">${esc(p.name)}</span><span class="tag">${esc(p.role || c.label)}</span>${p.optional ? '<span class="pill">optionnel</span>' : ''}
       ${note ? `<div class="note">${esc(note)}</div>` : ''}</span>
     <span class="check"></span>
   </button>`;
@@ -252,14 +290,14 @@ function renderToday() {
   const r = routineFor(date);
   const pr = dayProgress(date);
   const hasPhoto = !!state.photos[date];
-  // Thème du soir, comme dans la routine de Tom : exfoliation, rétinol ou récupération.
+  // Soirs d'exfoliation (lundi et jeudi) ou de rétinol mis en avant dans le titre.
   const cats = r.pm.map(p => p.category);
-  const pmLabel = cats.includes('retinoid') ? 'Soir · Rétinol' : cats.includes('exfoliant') ? 'Soir · Exfoliation'
-    : r.pm.some(p => CATEGORIES[p.category].group === 'skin') ? 'Soir · Récupération' : 'Soir';
+  const pmLabel = cats.includes('retinoid') ? 'Soir · Rétinol' : cats.includes('exfoliant') ? 'Soir · Exfoliation' : 'Soir';
   const slotBlock = (slot, label, icon) => {
     const list = r[slot];
-    const d = list.filter(p => isDone(date, slot, p.id)).length;
-    return `<div class="section-title"><h2>${icon} ${label}</h2><span class="muted small">${d}/${list.length}</span></div>
+    const required = list.filter(p => !p.optional);
+    const d = required.filter(p => isDone(date, slot, p.id)).length;
+    return `<div class="section-title"><h2>${icon} ${label}</h2><span class="muted small">${d}/${required.length}</span></div>
       <div class="card" style="padding:4px 10px">${list.length ? list.map((p, i) => stepHTML(p, slot, i)).join('') : '<p class="muted small">Rien de prévu.</p>'}</div>`;
   };
   $('#view').innerHTML = `
@@ -436,13 +474,13 @@ function renderProducts() {
     if (!items.length) return '<p class="muted small" style="padding:8px 4px">Aucun produit.</p>';
     return items.map(p => `<button class="prod" data-id="${p.id}" style="width:100%;text-align:left;${p.active ? '' : 'opacity:.5'}">
       <span class="body"><strong>${esc(p.name)}</strong>
-        <div class="meta">${esc(CATEGORIES[p.category].label)} · ${scheduleLabel(p)}</div></span>
+        <div class="meta">${esc(p.role || CATEGORIES[p.category].label)}${p.optional ? ' (optionnel)' : ''} · ${scheduleLabel(p)}</div></span>
       <span class="muted">›</span></button>`).join('');
   };
   $('#view').innerHTML = `
     <div class="row" style="margin-bottom:14px"><button class="btn block" id="import">Ajouter une liste</button><button class="btn block" id="more">Sauvegarde</button></div>
     ${groups.map(([g, label]) => `<div class="section-title"><h2>${label}</h2></div><div class="card" style="padding:4px 10px">${listHTML(g)}</div>`).join('')}
-    <p class="muted small">Le soir : exfoliation lun/mer/ven, rétinol mar/jeu/sam, récupération le dimanche. Si un rétinol et un exfoliant tombent le même soir, l'exfoliant saute. Touche un produit pour changer ses jours.</p>`;
+    <p class="muted small">Exfoliant les lundis et jeudis soir. Les étapes optionnelles s'affichent mais ne comptent pas dans la progression. Touche un produit pour changer son rôle ou ses jours.</p>`;
   $('#add').onclick = () => editProduct(null);
   $('#import').onclick = importList;
   $('#more').onclick = backupSheet;
@@ -458,17 +496,22 @@ function editProduct(id) {
   const draw = () => openSheet(`
     <h3>${existing ? 'Modifier' : 'Nouveau produit'}</h3>
     <label class="field"><span>Nom</span><input type="text" id="f-name" value="${esc(p.name)}" placeholder="ex. CeraVe gel moussant"></label>
+    <label class="field"><span>Rôle (1 ou 2 mots)</span><input type="text" id="f-role" value="${esc(p.role || '')}" placeholder="ex. Anti-taches"></label>
     <label class="field"><span>Type</span><select id="f-cat"><optgroup label="Peau">${catOptions('skin')}</optgroup><optgroup label="Dents">${catOptions('teeth')}</optgroup></select></label>
     <div class="field"><span>☀︎ Matin</span><div class="chips days">${dayChips('am')}</div></div>
     <div class="field"><span>☾ Soir</span><div class="chips days">${dayChips('pm')}</div></div>
     <label class="field"><span>Note (optionnel)</span><input type="text" id="f-note" value="${esc(p.note)}" placeholder="${esc(CATEGORIES[p.category].note || 'ex. 2 gouttes')}"></label>
+    <label class="row" style="margin-bottom:10px"><input type="checkbox" id="f-optional" ${p.optional ? 'checked' : ''}> <span>Optionnel (ne compte pas dans la progression)</span></label>
     <label class="row" style="margin-bottom:14px"><input type="checkbox" id="f-active" ${p.active ? 'checked' : ''}> <span>Utilisé en ce moment</span></label>
     <div class="sheet-actions">
       ${existing ? '<button class="btn danger" id="f-del">Supprimer</button>' : ''}
       <button class="btn" id="f-cancel">Annuler</button>
       <button class="btn primary" id="f-save">Enregistrer</button>
     </div>`, s => {
-    const sync = () => { p.name = $('#f-name', s).value; p.note = $('#f-note', s).value; p.active = $('#f-active', s).checked; };
+    const sync = () => {
+      p.name = $('#f-name', s).value; p.role = $('#f-role', s).value.trim(); p.note = $('#f-note', s).value;
+      p.optional = $('#f-optional', s).checked; p.active = $('#f-active', s).checked;
+    };
     $('#f-cat', s).onchange = e => {
       sync();
       const c = CATEGORIES[e.target.value];
